@@ -1,13 +1,15 @@
+import express from "express";
 import axios from "axios";
 
-// Your details
+const app = express();
+app.use(express.json());
+
 const NAME = "John Doe";
-const REG_NO = "REG12347"; // change this
+const REG_NO = "REG12347"; 
 const EMAIL = "john@example.com";
 
-(async function main() {
+async function runTestFlow() {
   try {
-    // Step 1: Generate webhook
     const genResp = await axios.post(
       "https://bfhldevapigw.healthrx.co.in/hiring/generateWebhook/JAVA",
       { name: NAME, regNo: REG_NO, email: EMAIL }
@@ -17,12 +19,10 @@ const EMAIL = "john@example.com";
     console.log("Generated Webhook:", webhook);
     console.log("Access Token:", accessToken);
 
-    // Step 2: Choose SQL query
     const lastTwo = parseInt(REG_NO.slice(-2), 10);
     let finalQuery;
 
     if (lastTwo % 2 === 1) {
-      // Odd → Question 1
       finalQuery = `
         SELECT 
             p.AMOUNT AS SALARY,
@@ -37,7 +37,6 @@ const EMAIL = "john@example.com";
         LIMIT 1;
       `;
     } else {
-      // Even → Question 2
       finalQuery = `
         SELECT 
             e1.EMP_ID,
@@ -55,7 +54,6 @@ const EMAIL = "john@example.com";
       `;
     }
 
-    // Step 3: Submit SQL query
     const submitResp = await axios.post(
       webhook,
       { finalQuery },
@@ -69,7 +67,21 @@ const EMAIL = "john@example.com";
 
     console.log("Submission Response:", submitResp.data);
 
+    return submitResp.data;
   } catch (err) {
     console.error("Error:", err.response?.data || err.message);
+    return { success: false, error: err.message };
   }
-})();
+}
+
+runTestFlow();
+
+app.get("/", async (req, res) => {
+  const result = await runTestFlow();
+  res.json(result);
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Express app running at http://localhost:${PORT}`);
+});
